@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en-NZ">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="../icon.png" />
+    <title>Demo</title>
+    <style>
+      * {
+        margin: 0;
+        box-sizing: border-box;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module">
+      import { createElement } from 'react';
+      import { createRoot } from 'react-dom/client';
+      import { App } from './src/App.tsx';
+
+      createRoot(document.querySelector('#root')).render(createElement(App));
+    </script>
+  </body>
+</html>

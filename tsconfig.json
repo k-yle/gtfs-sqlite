@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "useDefineForClassFields": true,
+    "lib": ["esnext", "dom", "webworker"],
+    "module": "esnext",
+    "skipLibCheck": true,
+    "stripInternal": true,
+    "outDir": "dist",
+    "declaration": true,
+    "checkJs": true,
+
+    "moduleResolution": "bundler",
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "types": ["wicg-file-system-access", "wicg-task-scheduling", "vite/client"],
+
+    "strict": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["src"]
+}

@@ -1,0 +1,53 @@
+{
+  "name": "gtfs-sqlite",
+  "version": "0.0.1",
+  "author": "Kyle Hensel",
+  "license": "MIT",
+  "description": "🚌🚇 A TS/JS library to import a GTFS file into a sqlite database, completely in the browser",
+  "repository": "https://github.com/k-yle/gtfs-sqlite",
+  "keywords": [
+    "gtfs",
+    "sqlite",
+    "sqlite3",
+    "webworker",
+    "wasm"
+  ],
+  "type": "module",
+  "source": "./src/index.ts",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && parcel build && node scripts/postBuild",
+    "typecheck": "tsc",
+    "lint": "eslint .",
+    "test": "vitest",
+    "trypublish": "npm publish || true"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@sqlite.org/sqlite-wasm": "^3.49.1-build4",
+    "gtfs-types": "^5.1.0",
+    "papaparse": "^5.5.2",
+    "unzipit": "^1.4.3"
+  },
+  "devDependencies": {
+    "@parcel/packager-ts": "^2.14.4",
+    "@parcel/transformer-typescript-types": "^2.14.4",
+    "@types/node": "^22.14.0",
+    "@types/papaparse": "^5.3.15",
+    "@types/wicg-file-system-access": "^2023.10.6",
+    "@types/wicg-task-scheduling": "^2024.1.0",
+    "@vitest/web-worker": "^3.1.1",
+    "eslint": "^9.24.0",
+    "eslint-config-kyle": "^25.0.0",
+    "parcel": "^2.14.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.1"
+  },
+  "prettier": "eslint-config-kyle/prettier"
+}
