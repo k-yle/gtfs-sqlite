@@ -36,3 +36,22 @@ SELECT DISTINCT st.stop_id,st.stop_sequence,st.pickup_type,st.drop_off_type,r.ro
 
 -- get metadata about a table
 PRAGMA table_info(stops)
+
+---
+
+-- find every bus stop that is only served by school busses, not public busses.
+SELECT DISTINCT s.stop_id FROM stops s WHERE s.stop_id IN (
+    SELECT DISTINCT stop_id FROM stop_times st WHERE st.trip_id IN (
+        SELECT trip_id FROM trips t WHERE t.route_id IN (
+            SELECT DISTINCT route_id FROM routes r WHERE r.route_type='712'
+        )
+    )
+) AND s.stop_id NOT IN (
+   SELECT DISTINCT s.stop_id FROM stops s WHERE s.stop_id IN (
+        SELECT DISTINCT stop_id FROM stop_times st WHERE st.trip_id IN (
+            SELECT trip_id FROM trips t WHERE t.route_id IN (
+                SELECT DISTINCT route_id FROM routes r WHERE r.route_type='3' OR r.route_type='700'
+            )
+        )
+    )
+)

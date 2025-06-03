@@ -100,13 +100,13 @@ export async function importDBFromZip({
 
   const filesBySize = Object.keys(entries)
     .filter(isValidFile)
-    .sort((a, b) => entries[a].size - entries[b].size);
+    .sort((a, b) => entries[a]!.size - entries[b]!.size);
 
   for (const fileName of filesBySize) {
     if (exclude?.includes(fileName)) continue;
 
     log(`[${fileName}] Reading into memory…`);
-    const arrayBuffer = await entries[fileName].blob();
+    const arrayBuffer = await entries[fileName]!.blob();
 
     const csv = await new Promise<ParseResult<string[]>>((resolve) => {
       parseCsv<string[]>(arrayBuffer as File, {
@@ -125,7 +125,7 @@ export async function importDBFromZip({
       // not a SQL injection risk because we've validated tableName
       `SELECT count(*) FROM sqlite_master WHERE type='table' AND name='${tableName}'`,
     );
-    const exists = meta[0]['count(*)'] !== 0;
+    const exists = meta[0]!['count(*)'] !== 0;
     if (exists) {
       progress.perFile[fileName]!.done = progress.perFile[fileName]!.total;
       continue;
@@ -138,10 +138,10 @@ export async function importDBFromZip({
     const remainingSeconds: number[] = [];
     let t = performance.now();
     for (let index = 0; index < csv.data.length; index++) {
-      const row = csv.data[index];
+      const row = csv.data[index]!;
 
       if (!(!row.length || (row.length === 1 && !row[0]))) {
-        row[0] = row[0].trim(); // if files use a broken mix of \r\n, strip new lines from the first cell
+        row[0] = row[0]!.trim(); // if files use a broken mix of \r\n, strip new lines from the first cell
         await comms.exec(commands.insert, { bind: row });
       }
 

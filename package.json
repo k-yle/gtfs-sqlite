@@ -24,7 +24,7 @@
     "typecheck": "tsc",
     "lint": "eslint .",
     "test": "vitest",
-    "trypublish": "npm publish || true"
+    "trypublish": "npm publish --provenance || true"
   },
   "engines": {
     "node": ">=18"
@@ -43,8 +43,8 @@
     "@types/wicg-file-system-access": "^2023.10.6",
     "@types/wicg-task-scheduling": "^2024.1.0",
     "@vitest/web-worker": "^3.1.1",
-    "eslint": "^9.24.0",
-    "eslint-config-kyle": "^25.0.0",
+    "eslint": "^9.28.0",
+    "eslint-config-kyle": "^26.2.1",
     "parcel": "^2.14.4",
     "typescript": "^5.8.3",
     "vitest": "^3.1.1"
