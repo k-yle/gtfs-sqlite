@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Stop } from 'gtfs-types';
-import { createSqlCommands } from '../import';
+import { createSqlCommands } from '../import.worker';
 
 describe('createSqlCommands', () => {
   it('generates the correct commands', () => {
