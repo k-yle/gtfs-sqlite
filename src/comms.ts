@@ -1,7 +1,7 @@
 import type { importDBFromZip } from './import';
 import type { PoolMethods, SqlWorker } from './sql.worker';
 
-const broadcast = new Worker(new URL('sql.worker.ts', import.meta.url), {
+const broadcast = new Worker(new URL('sql.worker.js', import.meta.url), {
   type: 'module',
 });
 

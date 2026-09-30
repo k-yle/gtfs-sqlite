@@ -13,14 +13,13 @@
     "wasm"
   ],
   "type": "module",
-  "source": "./src/index.ts",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "rm -rf dist && parcel build && node scripts/postBuild",
+    "build": "tsdown",
     "typecheck": "tsc",
     "lint": "eslint .",
     "test": "vitest",
@@ -36,8 +35,6 @@
     "unzipit": "^1.4.3"
   },
   "devDependencies": {
-    "@parcel/packager-ts": "^2.14.4",
-    "@parcel/transformer-typescript-types": "^2.14.4",
     "@types/node": "^22.14.0",
     "@types/papaparse": "^5.3.15",
     "@types/wicg-file-system-access": "^2023.10.6",
@@ -45,7 +42,7 @@
     "@vitest/web-worker": "^3.1.1",
     "eslint": "^9.28.0",
     "eslint-config-kyle": "^26.2.1",
-    "parcel": "^2.14.4",
+    "tsdown": "^0.23.0",
     "typescript": "^5.8.3",
     "vitest": "^3.1.1"
   },
