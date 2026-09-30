@@ -7,7 +7,7 @@ import sqlite3InitModule, {
 import type { GtfsFiles, Table } from 'gtfs-types';
 import type { CommsChannel } from './comms';
 import type { importDBFromZip } from './import';
-import { importIntoMemory } from './import.worker';
+import { importIntoDatabase } from './import.worker';
 
 type SAHPool = Awaited<ReturnType<Sqlite3Static['installOpfsSAHPoolVfs']>>;
 
@@ -16,8 +16,11 @@ class SqlWorker {
 
   #db: Database;
 
+  #pool: SAHPool;
+
   constructor(sqlite3: Sqlite3Static, databaseName: string, pool: SAHPool) {
     this.#sqlite3 = sqlite3;
+    this.#pool = pool;
     this.#db = new pool.OpfsSAHPoolDb(`/${databaseName}.sqlite3`);
   }
 
@@ -59,8 +62,10 @@ class SqlWorker {
   }
 
   async dump() {
-    const uint8 = this.#sqlite3.capi.sqlite3_js_db_export(this.#db);
-    const blob = new Blob([uint8.buffer], { type: 'application/x-sqlite3' });
+    const uint8 = await this.#pool.exportFile(this.#db.filename);
+    const blob = new Blob([<ArrayBuffer>uint8.buffer], {
+      type: 'application/x-sqlite3',
+    });
     return URL.createObjectURL(blob);
   }
 }
@@ -98,12 +103,21 @@ const poolMethods = {
     options: importDBFromZip.Options,
     onProgress: (progress: importDBFromZip.Progress) => void,
   ) {
-    const { sqlite3, pool } = await init();
-    const data = await importIntoMemory(sqlite3, options, onProgress);
+    const { pool } = await init();
+    const fileName = `/${options.databaseName}.sqlite3`;
 
     await closeDatabase(options.databaseName); // so that we can overwrite it
     await pool.reserveMinimumCapacity(pool.getFileCount() + 3);
-    await pool.importDb(`/${options.databaseName}.sqlite3`, data);
+    pool.unlink(fileName);
+    const database = new pool.OpfsSAHPoolDb(fileName);
+    try {
+      await importIntoDatabase(database, options, onProgress);
+      database.close();
+    } catch (ex) {
+      database.close();
+      pool.unlink(fileName);
+      throw ex;
+    }
   },
 
   async deleteDatabase(databaseName: string) {
