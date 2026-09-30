@@ -15,7 +15,7 @@ The sqlite database is stored in the [Origin Private File System](https://develo
 
 There means there is a slight overhead for each sql command, but it allows you to execute complex and expensive queries without blocking the main thread.
 
-![](https://github.com/user-attachments/assets/bdf49655-66cd-4ddb-a87b-320b83d36acc)
+![](https://github.com/user-attachments/assets/bd5e53fa-0e15-4b22-b999-e4878a64f9ea)
 
 <!--
 github can't natively render this some mermaid diagrams 🥲
