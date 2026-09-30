@@ -1,6 +1,6 @@
 {
   "name": "gtfs-sqlite",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "author": "Kyle Hensel",
   "license": "MIT",
   "description": "🚌🚇 A TS/JS library to import a GTFS file into a sqlite database, completely in the browser",
