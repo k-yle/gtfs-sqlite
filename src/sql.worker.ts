@@ -6,21 +6,19 @@ import sqlite3InitModule, {
 } from '@sqlite.org/sqlite-wasm';
 import type { GtfsFiles, Table } from 'gtfs-types';
 import type { CommsChannel } from './comms';
+import type { importDBFromZip } from './import';
+import { importIntoMemory } from './import.worker';
+
+type SAHPool = Awaited<ReturnType<Sqlite3Static['installOpfsSAHPoolVfs']>>;
 
 class SqlWorker {
   #sqlite3: Sqlite3Static;
 
   #db: Database;
 
-  #isInOPFS: boolean;
-
-  constructor(sqlite3: Sqlite3Static, databaseName: string) {
-    const file = `/${databaseName}.sqlite3`;
-    this.#isInOPFS = 'opfs' in sqlite3;
+  constructor(sqlite3: Sqlite3Static, databaseName: string, pool: SAHPool) {
     this.#sqlite3 = sqlite3;
-    this.#db = this.#isInOPFS
-      ? new sqlite3.oo1.OpfsDb(file)
-      : new sqlite3.oo1.DB(file, 'c');
+    this.#db = new pool.OpfsSAHPoolDb(`/${databaseName}.sqlite3`);
   }
 
   async getVersion() {
@@ -65,53 +63,91 @@ class SqlWorker {
     const blob = new Blob([uint8.buffer], { type: 'application/x-sqlite3' });
     return URL.createObjectURL(blob);
   }
-
-  /**
-   * @internal
-   * serialises {@link this.#db} to a {@link Uint8Array}, then saves it into
-   * the OPFS where it can be re-opened by a different instance of this
-   * class running in a WebWorker.
-   */
-  async copyDBFromMemoryToOPFS() {
-    if (this.#isInOPFS) throw new Error('This DB is already in the OPFS');
-
-    const uint8 = this.#sqlite3.capi.sqlite3_js_db_export(this.#db);
-    const blob = new Blob([uint8.buffer], { type: 'application/x-sqlite3' });
-
-    const rootFolder = await navigator.storage.getDirectory();
-    const fileHandle = await rootFolder.getFileHandle(
-      this.#db.filename.slice(1), // removing leading slash
-      { create: true },
-    );
-    const writable = await fileHandle.createWritable();
-    await writable.write(blob);
-    await writable.close();
-  }
 }
-const sqlite3Promise = sqlite3InitModule({
-  print: console.log,
-  printErr: console.error,
-});
+
+let cache: Promise<{ sqlite3: Sqlite3Static; pool: SAHPool }>;
+function init() {
+  cache ||= (async () => {
+    const sqlite3 = await sqlite3InitModule({
+      print: console.log,
+      printErr: console.error,
+    });
+    const pool = await sqlite3.installOpfsSAHPoolVfs({ name: 'gtfs-sqlite' });
+    return { sqlite3, pool };
+  })();
+  return cache;
+}
 
 const databases: { [dbName: string]: SqlWorker } = {};
 
+async function closeDatabase(databaseName: string) {
+  await databases[databaseName]?.close();
+  delete databases[databaseName];
+}
+
+const poolMethods = {
+  async getDatabaseNames() {
+    const { pool } = await init();
+    return pool
+      .getFileNames()
+      .filter((fileName) => fileName.endsWith('.sqlite3'))
+      .map((fileName) => fileName.slice(1).replace(/\.sqlite3$/, ''));
+  },
+
+  async importDBFromZip(
+    options: importDBFromZip.Options,
+    onProgress: (progress: importDBFromZip.Progress) => void,
+  ) {
+    const { sqlite3, pool } = await init();
+    const data = await importIntoMemory(sqlite3, options, onProgress);
+
+    await closeDatabase(options.databaseName); // so that we can overwrite it
+    await pool.reserveMinimumCapacity(pool.getFileCount() + 3);
+    await pool.importDb(`/${options.databaseName}.sqlite3`, data);
+  },
+
+  async deleteDatabase(databaseName: string) {
+    const { pool } = await init();
+    await closeDatabase(databaseName);
+    const deleted = pool.unlink(`/${databaseName}.sqlite3`);
+    if (!deleted) {
+      throw new ReferenceError(`Database "${databaseName}" does not exist`);
+    }
+  },
+};
+
 const isPayloadValid = (data: unknown): data is CommsChannel.Outbound =>
-  typeof data === 'object' && !!data && 'dbName' in data;
+  typeof data === 'object' && !!data && 'msgId' in data;
 
 const onMessage = async (message: MessageEvent) => {
   if (!isPayloadValid(message.data)) return;
 
   const { dbName, msgId, method, args } = message.data;
 
+  const onProgress = (progress: importDBFromZip.Progress) =>
+    postMessage({ msgId, progress } satisfies CommsChannel.Inbound);
+
   try {
-    const sqlite3 = await sqlite3Promise;
-    databases[dbName] ||= new SqlWorker(sqlite3, dbName);
+    let result: unknown;
+    if (dbName === undefined) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- safe since we have typesafety
+      result = await (<any>poolMethods[<keyof PoolMethods>method])(
+        ...args,
+        onProgress,
+      );
+    } else {
+      const { sqlite3, pool } = await init();
+      if (!databases[dbName]) {
+        await pool.reserveMinimumCapacity(pool.getFileCount() + 3);
+      }
+      databases[dbName] ||= new SqlWorker(sqlite3, dbName, pool);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- safe since we have typesafety
-    const result = await (<any>databases[dbName][method])(...args);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- safe since we have typesafety
+      result = await (<any>databases[dbName][<keyof SqlWorker>method])(...args);
 
-    // extra step required
-    if (method === 'close') delete databases[dbName];
+      // extra step required
+      if (method === 'close') delete databases[dbName];
+    }
 
     postMessage({
       msgId,
@@ -133,7 +169,6 @@ const onMessage = async (message: MessageEvent) => {
 if (typeof WorkerGlobalScope !== 'undefined') onmessage = onMessage;
 
 // important! only export types, nothing from this file should
-// be imported at runtime from the main thread, except for
-// controlled cases where the performance gain necessitates it.
+// be imported at runtime from the main thread.
 export type { SqlWorker };
-export { SqlWorker as dangerouslyUseSqlWorkerFromMainThread };
+export type PoolMethods = typeof poolMethods;

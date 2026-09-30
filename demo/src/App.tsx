@@ -2,11 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { getAllDatabaseNames } from 'gtfs-sqlite';
 import { Import } from './Import';
 import { Explore } from './Explore';
-import { CoepGateway } from './CoepGateway';
 
 const createNew = Symbol('createNew');
 
-const Main: React.FC = () => {
+export const App: React.FC = () => {
   const [error, setError] = useState<unknown>();
   const [databaseNames, setDatabaseNames] = useState<string[]>();
   const [activeId, setActiveId] = useState<string | typeof createNew>();
@@ -76,9 +75,3 @@ const Main: React.FC = () => {
     </>
   );
 };
-
-export const App: React.FC = () => (
-  <CoepGateway>
-    <Main />
-  </CoepGateway>
-);

@@ -13,8 +13,4 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['@sqlite.org/sqlite-wasm'],
   },
-  build: {
-    assetsDir: '',
-    assetsInlineLimit: (file) => !file.includes('sw.worker'),
-  },
 });

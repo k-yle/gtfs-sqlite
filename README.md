@@ -15,8 +15,6 @@ The sqlite database is stored in the [Origin Private File System](https://develo
 
 There means there is a slight overhead for each sql command, but it allows you to execute complex and expensive queries without blocking the main thread.
 
-There is one exception: When importing a dataset, we run this in the main thread because it's significantly faster, but it will cause the browser to appear unresponsive, despite [some logic to minimise](https://developer.mozilla.org/en-US/docs/Web/API/Scheduler/yield) the sluggishness.
-
 ![](https://github.com/user-attachments/assets/bdf49655-66cd-4ddb-a87b-320b83d36acc)
 
 <!--
@@ -28,23 +26,23 @@ zenuml
     title gtfs-sqlite
     @Actor User
     MainThread #fee
+    WebWorker #fee
     @Database <<DB>> InMemory #aee
     @Database <<DB>> OPFS #aee
-    WebWorker #fee
 
     @Starter(User)
     // Case 1
-    MainThread.importDatabase(zipFile) {
-        csvFiles = WebWorker.unzip(zipFile);
-        json = csvToJson(csvFiles);
-        // this blocks the main thread, but it's
-        // still more efficient than sending 10
-        // million rows to a worker thread because
-        // `window.postMessage` has a noticeable
-        // overhead.
-        sqliteDump = InMemory.import(json);
-
-        OPFS.sendBuffer(sqliteDump)
+    MainThread.importDBFromZip(zipFile) {
+        WebWorker.importDBFromZip(zipFile) {
+            csvFiles = unzip(zipFile);
+            forEach(csvFile) {
+                rows = parseCsv(csvFile);
+                InMemory.insert(rows);
+                WebWorker->MainThread: onProgress
+            }
+            sqliteDump = InMemory.export();
+            OPFS.importDb(sqliteDump);
+        }
     }
 
     // Case 2
@@ -64,20 +62,15 @@ npm install gtfs-sqlite
 
 You will need to use a bundler like vite that supports WebWorkers.
 
-For [security reasons](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer#security_requirements), you'll also need to add this logic to your `vite.config.js` file (or equivilant file for other bundlers):
+You'll also need to add this logic to your `vite.config.js` file (or equivilant file for other bundlers):
 
 ```ts
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  server: {
-    headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'require-corp',
-    },
-  },
   optimizeDeps: {
-    exclude: ['@sqlite.org/sqlite-wasm'],
+    exclude: ['@sqlite.org/sqlite-wasm', 'gtfs-sqlite'],
+    include: ['gtfs-sqlite > papaparse'],
   },
 });
 ```
