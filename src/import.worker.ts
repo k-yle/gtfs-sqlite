@@ -11,10 +11,11 @@ const isValidFile = (fileName: string): fileName is GtfsFile =>
 export function createSqlCommands(columns: string[], tableName: Table) {
   const fileName: GtfsFile = `${tableName}.txt`;
   const pk = PRIMARY_KEYS[fileName];
-  const pkCmd = pk
-    ? Array.isArray(pk)
-      ? `, PRIMARY KEY (${pk.filter((field) => columns.includes(field)).join(', ')})`
-      : `, PRIMARY KEY (${pk})`
+  const pkColumns = [pk]
+    .flat()
+    .filter((field) => field && columns.includes(field));
+  const pkCmd = pkColumns.length
+    ? `, PRIMARY KEY (${pkColumns.join(', ')})`
     : '';
 
   const columnsWithTypes = columns
