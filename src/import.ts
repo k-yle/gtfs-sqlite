@@ -8,8 +8,14 @@ export namespace importDBFromZip {
     warnings: Set<string>;
   }
 
+  export type IndividualFiles = Partial<Record<GtfsFile, Blob>>;
+
   export interface Options {
-    zipFile: File;
+    /**
+     * either a single Blob for the zip file, or an object
+     * containing {@link Blob}s for each individual file.
+     */
+    zipFile: File | IndividualFiles;
     databaseName: string;
     exclude?: GtfsFile[];
   }

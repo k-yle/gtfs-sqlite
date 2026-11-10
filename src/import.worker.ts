@@ -1,5 +1,5 @@
-import { type ZipEntry, unzip } from 'unzipit';
-import { type ParseResult, parse as parseCsv } from 'papaparse';
+import { unzip } from 'unzipit';
+import Csv, { type ParseResult } from 'papaparse';
 import type { Database } from '@sqlite.org/sqlite-wasm';
 import { DB_SCHEMA, type GtfsFile, PRIMARY_KEYS, type Table } from 'gtfs-types';
 import type { importDBFromZip } from './import';
@@ -91,7 +91,7 @@ const isEmptyRow = (row: string[]) =>
 
 async function importFile(
   database: Database,
-  entry: ZipEntry,
+  blob: Blob,
   fileName: GtfsFile,
   progress: importDBFromZip.Progress,
   log: (message?: string) => void,
@@ -100,7 +100,6 @@ async function importFile(
   const fileProgress = progress.perFile[fileName]!;
 
   log(`[${fileName}] Decompressing…`);
-  const blob = await entry.blob();
   const t = performance.now();
 
   let insert: ReturnType<Database['prepare']> | undefined;
@@ -135,7 +134,7 @@ async function importFile(
   try {
     await new Promise<void>((resolve, reject) => {
       const stream = blob.stream().pipeThrough(new TextDecoderStream());
-      parseCsv<string[]>(toNodeStream(stream), {
+      Csv.parse<string[]>(toNodeStream(stream), {
         chunk: onChunk,
         complete: () => resolve(),
         error: reject,
@@ -172,7 +171,19 @@ export async function importIntoDatabase(
   };
   log();
 
-  const { entries } = await unzip(zipFile);
+  const entries: Record<string, Blob> = {};
+  if (zipFile instanceof Blob) {
+    // single zipped blob
+    const zipEntries = await unzip(zipFile);
+    for (const file in zipEntries.entries) {
+      entries[file] = await zipEntries.entries[file]!.blob();
+    }
+  } else {
+    // individual blobs
+    for (const [key, value] of Object.entries(zipFile)) {
+      entries[key] = value instanceof Blob ? value : new Blob([value]);
+    }
+  }
 
   for (const file in entries) {
     if (isValidFile(file)) {
