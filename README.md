@@ -122,3 +122,28 @@ const rows = await db.exec<Route & Agency>(
   `,
 );
 ```
+
+# Unit Tests
+
+Unit Test environments rarely support WebWorkers. To workaround this, you can mock the import from `gtfs-sqlite` and replace it with `gtfs-sqlite/e2e`.
+
+After this swap, your existing code will run normally in unit tests.
+
+```ts
+import { vi } from 'vitest';
+import { promises as fs } from 'node:fs';
+import { importDBFromZip } from 'gtfs-sqlite/e2e';
+
+vi.mock('gtfs-sqlite', () => vi.importActual('gtfs-sqlite/e2e'));
+
+// that's it.
+
+// separately, if it's more convenient, an object can be provided instead of a zip file:
+await importDBFromZip({
+  databaseName: 'test',
+  zipFile: {
+    'stops.txt': new Blob(['stop_id,stop_name\n1,Main St\n']),
+    'routes.txt': new Blob([await fs.readFile('./mock/routes.txt')]),
+  },
+});
+```
