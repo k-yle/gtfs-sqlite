@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "@sqlite.org/sqlite-wasm": "^3.49.1-build4",
-    "gtfs-types": "^5.1.0",
+    "gtfs-types": "^6.0.0",
     "papaparse": "^5.5.2",
     "unzipit": "^1.4.3"
   },
